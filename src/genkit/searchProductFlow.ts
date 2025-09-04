@@ -1,6 +1,6 @@
 import { vertexAI } from '@genkit-ai/vertexai';
 import { genkit, GenkitError, z } from 'genkit';
-import { _CarSchemaResponse, TypesenseFieldDescriptionSchema, TypesenseQuerySchema } from './model/typesense.model';
+import { _ProductSchemaResponse, TypesenseFieldDescriptionSchema, TypesenseQuerySchema } from './model/typesense.model';
 import { unstable_cache } from 'next/cache';
 import { typesense } from '@/lib/typesense';
 import { clientEnv } from '@/utils/env';
@@ -12,28 +12,6 @@ const ai = genkit({
 });
 
 const MAX_FACET_VALUES = Number(process.env.TYPESENSE_MAX_FACET_VALUES || '20');
-
-export const menuSuggestionFlow = ai.defineFlow(
-    {
-        name: 'menuSuggestionFlow',
-        inputSchema: z.object({ theme: z.string() }),
-        outputSchema: z.object({ menuItem: z.string() }),
-        streamSchema: z.string(),
-    },
-    async ({ theme }, { sendChunk }) => {
-        const { stream, response } = ai.generateStream({
-            model: vertexAI.model('gemini-2.5-flash'),
-            prompt: `Invent a menu item for a ${theme} themed restaurant.`,
-        });
-
-        for await (const chunk of stream) {
-            sendChunk(chunk.text);
-        }
-
-        const { text } = await response;
-        return { menuItem: text };
-    }
-);
 
 async function getCollectionProperties() {
     const collection = await typesense({ isServer: true })
@@ -55,7 +33,7 @@ async function getCollectionProperties() {
     });
 
     const facetValues = await typesense()
-        .collections<_CarSchemaResponse>(clientEnv.TYPESENSE_COLLECTION_NAME)
+        .collections<_ProductSchemaResponse>(clientEnv.TYPESENSE_COLLECTION_NAME)
         .documents()
         .search({
             q: '*',
@@ -97,59 +75,56 @@ export const generateTypesenseQuery = ai.defineFlow(
     async (query) => {
         try {
             const { output } = await ai.generate({
-                model: vertexAI.model('gemini-2.5-flash'),
                 system:
-                    `You are assisting a user in searching for cars. Convert their query into the appropriate Typesense query format based on the instructions below.
+                    `You are helping a user search for clothing. Convert their query to the appropriate Typesense query format according to the instructions below.
                     ### Typesense Query Syntax ###
 
                     ## Filtering ##
 
                     Matching values: {fieldName}: followed by a string value or an array of string values each separated by a comma. Enclose the string value with backticks if it contains parentheses \`()\`. Examples:
-                    - model:prius
-                    - make:[BMW,Nissan] returns cars that are manufactured by BMW OR Nissan.
-                    - fuel_type:\`premium unleaded (required)\`
-                    - fuel_type:\`premium unleaded (recommended)\`
+                    - Size:S
+                    - BrandName:[TERRAIN,PUMA] returns products of the TERRAIN or PUMA brand.
+                    - SubCategoryName:\`Casacas para Hombre\`
+                    - SubCategoryName:\`Casacas para Hombre\`
 
 
                     Numeric Filters: Use :[min..max] for ranges, or comparison operators like :>, :<, :>=, :<=, :=. Examples:
-                    - year:[2000..2020]
-                    - highway_mpg:>40
-                    - msrp:=30000
+                    - Price:[20..80]
+                    - Price:>40
+                    - Price:=250
 
                     Multiple Conditions: Separate conditions with &&. Examples:
-                    - num_employees:>100 && country:[USA,UK]
-                    - categories:=Shoes && categories:=Outdoor
+                    - Price: >100 && BrandName: [TERRAIN,PUMA]
+                    - Size:=S && Color:=Azul
 
                     OR Conditions Across Fields: Use || only for different fields. Examples:
-                    - vehicle_size:Large || vehicle_style:Wagon
-                    - (vehicle_size:Large || vehicle_style:Wagon) && year:>2010
+                    - Size:S || Color:Azul
+                    - (Size:S || Color:Azul) && Price:>40
 
                     Negation: Use :!= to exclude values. Examples:
-                    - make:!=Nissan
-                    - make:!=[Nissan,BMW]
-                    - fuel_type:!=\`premium unleaded (required)\`
+                    - BrandName:!=TERRAIN
+                    - BrandName:!=[TERRAIN,PUMA]
+                    - SubCategoryName:!=\`Casacas para Hombre\`
 
 
                     If the same field is used for filtering multiple values in an || (OR) operation, then use the multi-value OR syntax. For eg:
-                    \`make:BMW || make:Honda || make:Ford\`
+                    \`BrandName:TERRAIN || BrandName:PUMA || BrandName:FILA\`
                     should be simplified as:
-                    \`make:[BMW, Honda, Ford]\`
+                    \`BrandName:[TERRAIN, PUMA, FILA]\`
 
                     ## Sorting ##
 
                     You can only sort maximum 3 sort fields at a time. The syntax is {fieldName}: follow by asc (ascending) or dsc (descending), if sort by multiple fields, separate them by a comma. Examples:
-                    - msrp:desc
-                    - year:asc,city_mpg:desc
+                    - Price:desc
+                    - Price:asc,BrandName:desc
 
                     Sorting hints:
-                    - When a user says something like "good mileage", sort by highway_mpg or/and city_mpg.
-                    - When a user says something like "powerful", sort by engine_hp.
-                    - When a user says something like "latest", sort by year.
+                    - When a user says something like "good price," sort by Price.
 
-                    ## Car properties ##
-                    The following are the car properties that you can use to filter and sort the data. Completely ignore the field names that are not in the list.
-                    | Name | Data Type | Filter | Sort | Enum Values | Description |
-                    |------|-----------|--------|------|-------------|-------------|
+                    ## Product properties ##
+                    The following are the product properties that you can use to filter and sort the data. Completely ignore the field names that are not in the list.
+                    | ProductId | SkuId | Name | CategoryName | SubCategoryName | BrandName | Price | Size | Color |
+                    |-----------|-------|------|--------------|-----------------|-----------|-------|------|-------|
                     ${await getCachedCollectionProperties()}
 
                     ### Query ###

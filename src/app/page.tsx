@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { runFlow, streamFlow } from '@genkit-ai/next/client';
-import { menuSuggestionFlow } from '@/genkit/menuSuggestionFlow';
+// import { runFlow, streamFlow } from '@genkit-ai/next/client';
+// import { generateTypesenseQuery } from '@/genkit/searchProductFlow';
 
 export default function Home() {
   const [menuItem, setMenuItem] = useState<string>('');
@@ -13,47 +13,47 @@ export default function Home() {
     const theme = formData.get('theme')?.toString() ?? '';
     setIsLoading(true);
 
-    try {
-      // Regular (non-streaming) approach
-      const result = await runFlow<typeof menuSuggestionFlow>({
-        url: '/api/menuSuggestion',
-        input: { theme },
-      });
+    // try {
+    //   // Regular (non-streaming) approach
+    //   const result = await runFlow<typeof generateTypesenseQuery>({
+    //     url: '/api/menuSuggestion',
+    //     input: { theme },
+    //   });
 
-      setMenuItem(result.menuItem);
-    } catch (error) {
-      console.error('Error generating menu item:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    //   setMenuItem(result.menuItem);
+    // } catch (error) {
+    //   console.error('Error generating menu item:', error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   }
 
-  async function streamMenuItem(formData: FormData) {
-    const theme = formData.get('theme')?.toString() ?? '';
-    setIsLoading(true);
-    setStreamedText('');
+  // async function streamMenuItem(formData: FormData) {
+  //   const theme = formData.get('theme')?.toString() ?? '';
+  //   setIsLoading(true);
+  //   setStreamedText('');
 
-    try {
-      // Streaming approach
-      const result = streamFlow<typeof menuSuggestionFlow>({
-        url: '/api/menuSuggestion',
-        input: { theme },
-      });
+  //   try {
+  //     // Streaming approach
+  //     const result = streamFlow<typeof menuSuggestionFlow>({
+  //       url: '/api/menuSuggestion',
+  //       input: { theme },
+  //     });
 
-      // Process the stream chunks as they arrive
-      for await (const chunk of result.stream) {
-        setStreamedText((prev) => prev + chunk);
-      }
+  //     // Process the stream chunks as they arrive
+  //     for await (const chunk of result.stream) {
+  //       setStreamedText((prev) => prev + chunk);
+  //     }
 
-      // Get the final complete response
-      const finalOutput = await result.output;
-      setMenuItem(finalOutput.menuItem);
-    } catch (error) {
-      console.error('Error streaming menu item:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  //     // Get the final complete response
+  //     const finalOutput = await result.output;
+  //     setMenuItem(finalOutput.menuItem);
+  //   } catch (error) {
+  //     console.error('Error streaming menu item:', error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }
 
   return (
     <main>
@@ -65,17 +65,7 @@ export default function Home() {
         <button type="submit" disabled={isLoading}>
           Generate
         </button>
-        <button
-          type="button"
-          disabled={isLoading}
-          onClick={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget.form!);
-            streamMenuItem(formData);
-          }}
-        >
-          Stream Generation
-        </button>
+
       </form>
       <br />
 
