@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState } from 'react';
@@ -12,13 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { LIST_PRODUCTS_MOCK } from './../mock/list_products';
-import { Product } from './../model/product';
+import { ProductInterface } from './../model/product';
 
 import { runFlow } from '@genkit-ai/next/client';
 import { generateTypesenseQuery } from '@/genkit/searchProductFlow';
-
-import { clientEnv } from '@/utils/env';
-import { _ProductSchemaResponse } from '@/genkit/model/typesense.model';
 
 interface ResultQueryInterface {
   query?: string | undefined;
@@ -105,7 +103,7 @@ export default function Home() {
               </div> */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {
-                  LIST_PRODUCTS_MOCK.map((product: Product) => (
+                  LIST_PRODUCTS_MOCK.map((product: ProductInterface) => (
                     <Card key={product.sku_id} className="mb-4">
                       <CardHeader>
                         <CardTitle>{product.name}</CardTitle>
