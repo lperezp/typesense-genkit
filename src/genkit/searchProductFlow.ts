@@ -165,6 +165,19 @@ export const generateTypesenseQuery = ai.defineFlow(
     }
 );
 
+export async function callGenerateTypesenseQuery(query: string) {
+    try {
+        const flowResponse = await generateTypesenseQuery(query);
+        console.log(flowResponse);
+        return { data: flowResponse, error: null };
+    } catch (error) {
+        return {
+            data: null,
+            error: { message: (error as CustomGenkitGenerationError).message },
+        };
+    }
+}
+
 class CustomGenkitGenerationError extends Error {
     constructor(message = '') {
         super(message);
