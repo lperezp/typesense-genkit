@@ -1,6 +1,6 @@
-export const USD_Formatter = new Intl.NumberFormat('en-US', {
+export const PEN_Formatter = new Intl.NumberFormat('es-PE', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'PEN',
     maximumFractionDigits: 0,
 });
 

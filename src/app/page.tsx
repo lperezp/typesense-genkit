@@ -1,87 +1,130 @@
 'use client';
 
 import { useState } from 'react';
-// import { runFlow, streamFlow } from '@genkit-ai/next/client';
-// import { generateTypesenseQuery } from '@/genkit/searchProductFlow';
+import { Header } from "@/components/Header";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { LIST_PRODUCTS_MOCK } from './../mock/list_products';
+import { Product } from './../model/product';
+
+import { runFlow } from '@genkit-ai/next/client';
+import { generateTypesenseQuery } from '@/genkit/searchProductFlow';
+
+import { clientEnv } from '@/utils/env';
+import { _ProductSchemaResponse } from '@/genkit/model/typesense.model';
+
+interface ResultQueryInterface {
+  query?: string | undefined;
+  filter_by?: string | undefined;
+  sort_by?: string | undefined;
+}
 
 export default function Home() {
-  const [menuItem, setMenuItem] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamedText, setStreamedText] = useState<string>('');
+  const [query, setQuery] = useState<ResultQueryInterface | null>(null);
+  const [loadingState, setLoadingState] = useState<
+    'generating' | 'searching' | 'finished'
+  >('finished');
 
-  async function getMenuItem(formData: FormData) {
-    const theme = formData.get('theme')?.toString() ?? '';
-    setIsLoading(true);
 
-    // try {
-    //   // Regular (non-streaming) approach
-    //   const result = await runFlow<typeof generateTypesenseQuery>({
-    //     url: '/api/menuSuggestion',
-    //     input: { theme },
-    //   });
+  async function getQuerySearch(formData: FormData) {
+    const theme = formData.get('search')?.toString() ?? '';
 
-    //   setMenuItem(result.menuItem);
-    // } catch (error) {
-    //   console.error('Error generating menu item:', error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    try {
+      const result = await runFlow<typeof generateTypesenseQuery>({
+        url: '/api/searchSuggestion',
+        input: theme,
+      });
+      setQuery(result);
+      getProducts(JSON.stringify(result));
+
+    } catch (error) {
+      console.error('Error generating menu item:', error);
+    }
   }
 
-  // async function streamMenuItem(formData: FormData) {
-  //   const theme = formData.get('theme')?.toString() ?? '';
-  //   setIsLoading(true);
-  //   setStreamedText('');
+  async function getProducts(query: string) {
+    console.log('Query to search products:', query);
+    try {
+      setLoadingState('searching');
+      // const params = JSON.parse(query);
 
-  //   try {
-  //     // Streaming approach
-  //     const result = streamFlow<typeof menuSuggestionFlow>({
-  //       url: '/api/menuSuggestion',
-  //       input: { theme },
-  //     });
+      const q = JSON.parse(query);
 
-  //     // Process the stream chunks as they arrive
-  //     for await (const chunk of result.stream) {
-  //       setStreamedText((prev) => prev + chunk);
-  //     }
+      const params = {
+        q: q.query || '*',
+        filter_by: q.filter_by || '',
+        sort_by: q.sort_by || '',
+      };
 
-  //     // Get the final complete response
-  //     const finalOutput = await result.output;
-  //     setMenuItem(finalOutput.menuItem);
-  //   } catch (error) {
-  //     console.error('Error streaming menu item:', error);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // }
+      console.log('Search Params:', params);
+
+
+      // const searchResponse = await typesense().collections<_ProductSchemaResponse>(clientEnv.TYPESENSE_COLLECTION_NAME).documents().search(params);
+
+      // console.log('Search Response:', searchResponse);
+
+    }
+    catch (error) {
+      console.error('Error searching products:', error);
+    }
+  }
 
   return (
-    <main>
-      <form action={getMenuItem}>
-        <label htmlFor="theme">Suggest a menu item for a restaurant with this theme: </label>
-        <input type="text" name="theme" id="theme" />
-        <br />
-        <br />
-        <button type="submit" disabled={isLoading}>
-          Generate
-        </button>
-
-      </form>
-      <br />
-
-      {streamedText && (
-        <div>
-          <h3>Streaming Output:</h3>
-          <pre>{streamedText}</pre>
+    <main className='flex flex-col items-center p-0 min-h-screen'>
+      <Header />
+      <div className="p-4 w-4xl flex flex-col items-center justify-items-center">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mt-2 mb-2">Búsqueda de Productos con Gen AI</h1>
+          <h2 className="text-l text-gray-600 dark:text-gray-400 mb-4">
+            Potenciado por <img src={'./typesense.svg'} alt="Typesense Logo" className="inline-block h-6 mr-1" /> y <img src={'./genkit.svg'} alt="Genkit Logo" className="inline-block h-4 mr-1" />
+          </h2>
         </div>
-      )}
-
-      {menuItem && (
-        <div>
-          <h3>Final Output:</h3>
-          <pre>{menuItem}</pre>
+        <div className="flex flex-col items-center gap-4 mb-8 w-full max-w-md">
+          <form action={getQuerySearch} className="w-full">
+            <div className="flex w-full items-center gap-2">
+              <Input type="text" name="search" id="search" className="pl-2" placeholder="Qué quieres buscar?" />
+              <Button type="submit" variant="outline" disabled={loadingState === 'searching'}>
+                {loadingState === 'searching' ? 'Buscando...' : 'Buscar'}
+              </Button>
+            </div>
+          </form>
         </div>
-      )}
+        <div className="w-full max-w-screen-lg">
+          {query && (
+            <div>
+              <h3 className="text-xl font-semibold mb-3">Resultados:</h3>
+              {/* <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <pre className="whitespace-pre-wrap text-sm">{menuItem}</pre>
+              </div> */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {
+                  LIST_PRODUCTS_MOCK.map((product: Product) => (
+                    <Card key={product.sku_id} className="mb-4">
+                      <CardHeader>
+                        <CardTitle>{product.name}</CardTitle>
+                        <CardDescription>{product.brand_name}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p>Precio: {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(product.price)}</p>
+                        <p>Color: {product.color}</p>
+                        <p>Talla: {product.size}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+
+
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
