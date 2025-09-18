@@ -96,37 +96,4 @@ export function useSearch(): UseSearchResult {
     };
 }
 
-// Hook para obtener facets disponibles
-export function useFacets() {
-    const [facets, setFacets] = useState<SearchResults['facet_counts'] | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchFacets = async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await fetch('/api/facets');
-            const data = await response.json();
-
-            if (data.success) {
-                setFacets(data.data);
-            } else {
-                setError(data.error || 'Error obteniendo filtros');
-            }
-        } catch (err) {
-            setError('Error de conexión');
-            console.error('Error fetching facets:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return {
-        facets,
-        loading,
-        error,
-        fetchFacets
-    };
-}
+// Hook simplificado - solo búsqueda por texto

@@ -1,23 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearch, useFacets } from '@/app/hooks/useSearch';
+import { useSearch } from '@/app/hooks/useSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
 export default function SearchComponent() {
     const { results, loading, error, search, clearResults } = useSearch();
-    const { facets, fetchFacets } = useFacets();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [filters, setFilters] = useState({
-        brand: '',
-        category: '',
-        gender: '',
-        min_price: '',
-        max_price: ''
-    });
 
     const handleSearch = async (page = 1) => {
         setCurrentPage(page);
@@ -25,85 +17,43 @@ export default function SearchComponent() {
         const searchParams = {
             query: searchQuery || '*',
             page,
-            per_page: 12,
-            ...(filters.brand && { brand: filters.brand }),
-            ...(filters.category && { category: filters.category }),
-            ...(filters.gender && { gender: filters.gender }),
-            ...(filters.min_price && { min_price: parseFloat(filters.min_price) }),
-            ...(filters.max_price && { max_price: parseFloat(filters.max_price) }),
+            per_page: 12
         };
 
         await search(searchParams);
     };
 
-    const handleFilterChange = (filterName: string, value: string) => {
-        setFilters(prev => ({ ...prev, [filterName]: value }));
-    };
-
     const handleClear = () => {
         setSearchQuery('');
-        setFilters({
-            brand: '',
-            category: '',
-            gender: '',
-            min_price: '',
-            max_price: ''
-        });
         clearResults();
+        setCurrentPage(1);
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSearch(1);
+        }
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-6">Búsqueda de Productos</h1>
-
-            {/* Barra de búsqueda */}
-            <div className="mb-6 space-y-4">
-                <div className="flex gap-2">
+        <div className="w-full">
+            {/* Barra de búsqueda simple */}
+            <div className="mb-6">
+                <div className="flex gap-2 max-w-2xl mx-auto">
                     <Input
                         type="text"
                         placeholder="Buscar productos..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        onKeyPress={handleKeyPress}
                         className="flex-1"
                     />
-                    <Button onClick={() => handleSearch()} disabled={loading}>
+                    <Button onClick={() => handleSearch(1)} disabled={loading}>
                         {loading ? 'Buscando...' : 'Buscar'}
                     </Button>
                     <Button variant="outline" onClick={handleClear}>
                         Limpiar
                     </Button>
-                </div>
-
-                {/* Filtros */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <Input
-                        placeholder="Marca"
-                        value={filters.brand}
-                        onChange={(e) => handleFilterChange('brand', e.target.value)}
-                    />
-                    <Input
-                        placeholder="Categoría"
-                        value={filters.category}
-                        onChange={(e) => handleFilterChange('category', e.target.value)}
-                    />
-                    <Input
-                        placeholder="Género"
-                        value={filters.gender}
-                        onChange={(e) => handleFilterChange('gender', e.target.value)}
-                    />
-                    <Input
-                        type="number"
-                        placeholder="Precio mín."
-                        value={filters.min_price}
-                        onChange={(e) => handleFilterChange('min_price', e.target.value)}
-                    />
-                    <Input
-                        type="number"
-                        placeholder="Precio máx."
-                        value={filters.max_price}
-                        onChange={(e) => handleFilterChange('max_price', e.target.value)}
-                    />
                 </div>
             </div>
 
@@ -201,27 +151,6 @@ export default function SearchComponent() {
                 </div>
             )}
 
-            {/* Botón para obtener facets */}
-            <div className="mt-8">
-                <Button variant="outline" onClick={fetchFacets}>
-                    Ver Filtros Disponibles
-                </Button>
-                {facets && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded">
-                        <h3 className="font-semibold mb-2">Filtros Disponibles:</h3>
-                        {facets.map((facet) => (
-                            <div key={facet.field_name} className="mb-2">
-                                <strong>{facet.field_name}:</strong>{' '}
-                                {facet.counts.slice(0, 5).map((count) => (
-                                    <span key={count.value} className="mr-2 text-sm">
-                                        {count.value} ({count.count})
-                                    </span>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
         </div>
     );
 }

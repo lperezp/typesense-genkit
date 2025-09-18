@@ -52,12 +52,12 @@ interface IProduct {
 **Campo de ordenación por defecto:** `price`
 **Documentos en la colección:** 976 productos
 
-## 🔍 Funcionalidades de Búsqueda
+## 🔍 Búsqueda Simplificada
 
 ### API Endpoints
 
-- **`GET /api/search`** - Búsqueda principal con filtros
-- **`GET /api/facets`** - Obtener filtros disponibles
+- **`GET /api/search`** - Búsqueda principal por texto
+- **`GET /api/test-connection`** - Probar conexión con Typesense Cloud
 
 ### Probar Conexión
 
@@ -68,22 +68,22 @@ Primero verifica que la conexión funcione:
 GET /api/test-connection
 ```
 
-### Parámetros de Búsqueda
+### Búsqueda por Texto
 
 ```bash
-# Búsqueda básica
+# Búsqueda básica por texto
 GET /api/search?q=polo
 
-# Con filtros
-GET /api/search?q=*&brand=PUMA&gender=Hombre&min_price=40&max_price=100
+# Búsqueda general (todos los productos)
+GET /api/search?q=*
 
 # Con paginación
-GET /api/search?q=*&page=2&per_page=6
+GET /api/search?q=polo&page=2&per_page=12
 ```
 
 ## 💻 Uso en Frontend
 
-### Hook useSearch
+### Hook useSearch (Simplificado)
 
 ```tsx
 import { useSearch } from '@/app/hooks/useSearch';
@@ -94,7 +94,6 @@ function MySearchComponent() {
     const handleSearch = async () => {
         await search({
             query: 'polo',
-            brand: 'PUMA',
             page: 1,
             per_page: 12
         });
@@ -102,7 +101,13 @@ function MySearchComponent() {
 
     return (
         <div>
+            <input 
+                type="text" 
+                placeholder="Buscar productos..."
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
             <button onClick={handleSearch}>Buscar</button>
+            
             {loading && <p>Buscando...</p>}
             {results && (
                 <div>
@@ -135,20 +140,21 @@ export default function SearchPage() {
 ## 🎯 Características
 
 ✅ **Búsqueda de texto completo** con relevancia  
-✅ **Filtros por marca, categoría, género, precio**  
+✅ **Interfaz simple** - solo input de búsqueda  
 ✅ **Paginación** eficiente  
-✅ **Facets dinámicos** para mostrar opciones de filtro  
+✅ **Búsqueda en tiempo real** (Enter o botón)  
 ✅ **Tiempo de respuesta** mostrado  
 ✅ **Score de relevancia** por producto  
+✅ **Grid responsive** de productos  
 
 ## 🚀 Archivos Principales
 
-- `/lib/search-service.ts` - Servicio de búsqueda
+- `/lib/search-service.ts` - Servicio de búsqueda simplificado
 - `/lib/typesense.ts` - Configuración del cliente
-- `/app/hooks/useSearch.ts` - Hook para frontend
-- `/app/api/search/route.ts` - API de búsqueda
-- `/app/api/facets/route.ts` - API de facets
-- `/app/components/search-component.tsx` - Componente de ejemplo
+- `/app/hooks/useSearch.ts` - Hook simple para frontend
+- `/app/api/search/route.ts` - API de búsqueda por texto
+- `/app/api/test-connection/route.ts` - API para probar conexión
+- `/app/components/search-component.tsx` - Componente simple de búsqueda
 
 ## 📝 Notas
 

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { Header } from './components/header';
@@ -11,8 +12,8 @@ export default function Home() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mt-2 mb-2">Búsqueda de Productos con Gen AI</h1>
           <h2 className="text-l text-gray-600 dark:text-gray-400 mb-4">
-            Potenciado por {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={'./typesense.svg'} alt="Typesense Logo" className="inline-block h-6 mr-1" /> y {/* eslint-disable-next-line @next/next/no-img-element */}
+            Potenciado por
+            <img src={'./typesense.svg'} alt="Typesense Logo" className="inline-block h-6 mr-1" /> y
             <img src={'./genkit.svg'} alt="Genkit Logo" className="inline-block h-4 mr-1" />
           </h2>
         </div>
