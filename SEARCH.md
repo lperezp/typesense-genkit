@@ -78,7 +78,7 @@ GET /api/search?q=polo
 GET /api/search?q=*
 
 # Con paginación
-GET /api/search?q=polo&page=2&per_page=12
+GET /api/search?q=polo&page=2&per_page=20
 ```
 
 ## 💻 Uso en Frontend
@@ -93,10 +93,10 @@ function MySearchComponent() {
 
     const handleSearch = async () => {
         await search({
-            query: 'polo',
-            page: 1,
-            per_page: 12
-        });
+                query: 'polo',
+                page: 1,
+                per_page: 20
+            });
     };
 
     return (
@@ -137,7 +137,16 @@ export default function SearchPage() {
 }
 ```
 
-## 🎯 Características
+### 🎯 Interfaz Final
+```
+[Input: "Buscar productos..."] [Buscar]
+
+Se encontraron 45 productos en 12ms          Página 1
+
+[Grid de productos con imágenes, nombres, precios]
+
+[Anterior] Página 1 [Siguiente]
+```
 
 ✅ **Búsqueda de texto completo** con relevancia  
 ✅ **Interfaz simple** - solo input de búsqueda  

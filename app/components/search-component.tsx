@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
 export default function SearchComponent() {
-    const { results, loading, error, search, clearResults } = useSearch();
+    const { results, loading, error, search } = useSearch();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -17,16 +17,10 @@ export default function SearchComponent() {
         const searchParams = {
             query: searchQuery || '*',
             page,
-            per_page: 12
+            per_page: 20
         };
 
         await search(searchParams);
-    };
-
-    const handleClear = () => {
-        setSearchQuery('');
-        clearResults();
-        setCurrentPage(1);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -50,9 +44,6 @@ export default function SearchComponent() {
                     />
                     <Button onClick={() => handleSearch(1)} disabled={loading}>
                         {loading ? 'Buscando...' : 'Buscar'}
-                    </Button>
-                    <Button variant="outline" onClick={handleClear}>
-                        Limpiar
                     </Button>
                 </div>
             </div>
@@ -143,7 +134,7 @@ export default function SearchComponent() {
                         <Button
                             variant="outline"
                             onClick={() => handleSearch(currentPage + 1)}
-                            disabled={results.hits.length < 12 || loading}
+                            disabled={results.hits.length < 20 || loading}
                         >
                             Siguiente
                         </Button>
