@@ -14,7 +14,7 @@ export default function Home() {
           <h2 className="text-l text-gray-600 dark:text-gray-400 mb-4">
             Potenciado por
             <img src={'./typesense.svg'} alt="Typesense Logo" className="inline-block h-6 mr-1" /> y
-            <img src={'./genkit.svg'} alt="Genkit Logo" className="inline-block h-4 mr-1" />
+            <img src={'./genkit.svg'} alt="Genkit Logo" className="inline-block h-4 ml-2" />
           </h2>
         </div>
 

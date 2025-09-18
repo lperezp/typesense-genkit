@@ -145,7 +145,7 @@ export const generateTypesenseQuery = ai.defineFlow(
                     Matching values: {fieldName}: followed by a string value or an array of string values each separated by a comma. Enclose the string value with backticks if it contains parentheses \`()\`. Examples:
                     - size:S
                     - brand_name:[TERRAIN,PUMA] returns products of the TERRAIN or PUMA brand.
-                    - sub_category_name:\`Casacas para Hombre\`
+                    - sub_category_name:\`Polos para Hombre\`
 
                     Numeric Filters: Use :[min..max] for ranges, or comparison operators like :>, :<, :>=, :<=, :=. Examples:
                     - price:[20..80]
