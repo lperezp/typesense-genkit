@@ -2,19 +2,20 @@ import { googleAI } from '@genkit-ai/googleai';
 import { genkit, GenkitError, z } from 'genkit';
 import { Client } from 'typesense';
 import { CollectionFieldSchema } from 'typesense/lib/Typesense/Collection';
+import { TypesenseQuerySchema } from './model/typesense.model';
 
 // Configuración de Typesense
 const client = new Client({
     nodes: [{
-        host: process.env.TYPESENSE_HOST || 'localhost',
-        port: parseInt(process.env.TYPESENSE_PORT || '8108'),
-        protocol: process.env.TYPESENSE_PROTOCOL || 'http'
+        host: `${process.env.TYPESENSE_HOST}`,
+        port: parseInt(process.env.TYPESENSE_PORT || ''),
+        protocol: `${process.env.TYPESENSE_PROTOCOL}`
     }],
-    apiKey: process.env.TYPESENSE_API_KEY || 'xyz',
+    apiKey: `${process.env.TYPESENSE_API_KEY}`,
     connectionTimeoutSeconds: 2
 });
 
-const TYPESENSE_COLLECTION_NAME = process.env.TYPESENSE_COLLECTION_NAME || 'products';
+const TYPESENSE_COLLECTION_NAME = `${process.env.TYPESENSE_COLLECTION_NAME}`;
 const MAX_FACET_VALUES = Number(process.env.TYPESENSE_MAX_FACET_VALUES || '20');
 
 // Función de utilidad
@@ -51,18 +52,6 @@ const ai = genkit({
     plugins: [googleAI()],
 });
 
-// Esquema para la consulta de Typesense que generará Gemini
-const TypesenseQuerySchema = z.object({
-    q: z.string().optional().describe('Texto de búsqueda. Usar solo si filter_by no es suficiente'),
-    query_by: z.string().optional().describe('Campos en los que buscar: name,brand_name,category_name,sub_category_name'),
-    filter_by: z.string().optional().describe('Filtros de Typesense en formato: campo:valor && campo2:valor2'),
-    sort_by: z.string().optional().describe('Ordenación en formato: campo:asc o campo:desc'),
-    facet_by: z.string().optional().describe('Campos para facets separados por comas'),
-    page: z.number().optional().describe('Número de página'),
-    per_page: z.number().optional().describe('Elementos por página'),
-});
-
-export type TypesenseQuerySchema = z.infer<typeof TypesenseQuerySchema>;
 let cachedCollectionProperties: string | null = null;
 
 async function getCollectionProperties() {
@@ -115,23 +104,15 @@ async function getCollectionProperties() {
         return rows.concat(facetableRows).join('\n');
     } catch (error) {
         console.error('Error getting collection properties:', error);
-        // Return a default schema if we can't get the collection properties
-        return `|name|string|Yes|No||Product name|
-|brand_name|string|Yes|No|PUMA,ADIDAS,NIKE,FILA|Brand name|
-|category_name|string|Yes|No|Hombre,Mujer,Niños|Category|
-|department_name|string|Yes|No|Moda,Deportes|Department|
-|sub_category_name|string|Yes|No|Polos,Casacas,Zapatillas|Sub-category|
-|color|string|Yes|No|Azul,Rojo,Verde,Negro,Blanco|Color|
-|size|string|Yes|No|S,M,L,XL,XXL|Size|
-|gender|string|Yes|No|Hombre,Mujer,Unisex|Gender|
-|price|float|Yes|Yes||Product price|
-|stock|int|Yes|No||Stock available|`;
+        return ``;
     }
 }
 
 const getCachedCollectionProperties = async () => {
     if (cachedCollectionProperties === null) {
         cachedCollectionProperties = await getCollectionProperties();
+        console.log('Cached collection properties:', cachedCollectionProperties);
+
     }
     return cachedCollectionProperties;
 };
@@ -153,11 +134,9 @@ export const generateTypesenseQuery = ai.defineFlow(
             }
 
             console.log('Starting generateTypesenseQuery with query:', query);
-            console.log('Calling ai.generate...');
-            const { output } = await ai.generate({
-                model: googleAI.model('gemini-1.5-flash'),
-                system:
-                    `You are helping a user search for clothing. Convert their query to the appropriate Typesense query format according to the instructions below.
+
+            // Construir el system prompt
+            const systemPrompt = `You are helping a user search for clothing. Convert their query to the appropriate Typesense query format according to the instructions below.
                     
                     ### Typesense Query Syntax ###
 
@@ -210,12 +189,28 @@ export const generateTypesenseQuery = ai.defineFlow(
                     Include query only if both filter_by and sort_by are inadequate. Don't include filter_by or sort_by in the ouput if their values are null.
 
                     ### Output Instructions ###
-                    Provide the valid JSON with the correct filter and sorting format, only include fields with non-null values. Do not add extra text or explanations.`,
+                    Provide the valid JSON with the correct filter and sorting format, only include fields with non-null values. Do not add extra text or explanations.`;
+
+            // Imprimir prompts en consola para debugging
+            console.log('\n=== GENKIT AI PROMPT DEBUG ===');
+            console.log('🔍 User Query:', query);
+            console.log('\n📋 Collection Properties:');
+            console.log(collectionProperties);
+            console.log('\n🤖 System Prompt:');
+            console.log(systemPrompt);
+            console.log('\n💬 User Prompt:', query);
+            console.log('=== END DEBUG ===\n');
+
+            console.log('Calling ai.generate...');
+            const { output } = await ai.generate({
+                model: googleAI.model('gemini-1.5-flash'),
+                system: systemPrompt,
                 prompt: `${query}`,
                 output: { schema: TypesenseQuerySchema },
             });
 
             console.log('ai.generate completed successfully');
+            console.log('🎯 Generated Typesense Query:', JSON.stringify(output, null, 2));
             if (output !== null) return output;
         } catch (error) {
             console.error('Error details:', error);
@@ -235,9 +230,17 @@ export const generateTypesenseQuery = ai.defineFlow(
 export async function callGenerateTypesenseQuery(query: string) {
     try {
         const flowResponse = await generateTypesenseQuery(query);
-        console.log(flowResponse);
+
+        // Log detallado de la respuesta del modelo
+        console.log('\n🚀 === RESPUESTA DEL MODELO GEMINI ===');
+        console.log('📥 Query original:', query);
+        console.log('🤖 Respuesta de Gemini:', JSON.stringify(flowResponse, null, 2));
+        console.log('📤 Enviando a Typesense:', flowResponse);
+        console.log('=== FIN RESPUESTA MODELO ===\n');
+
         return { data: flowResponse, error: null };
     } catch (error) {
+        console.error('❌ Error en callGenerateTypesenseQuery:', error);
         return {
             data: null,
             error: { message: (error as CustomGenkitGenerationError).message },

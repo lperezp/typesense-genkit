@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 export default function SearchComponent() {
     const { results, loading, error, aiSearch } = useAISearch();
     const [searchQuery, setSearchQuery] = useState('');
+    const [showGeminiResponse, setShowGeminiResponse] = useState(true);
 
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
@@ -40,6 +41,18 @@ export default function SearchComponent() {
                 </div>
             </div>
 
+            {results &&
+                <>
+                    {showGeminiResponse && (
+                        <pre className="text-xs mb-4 p-2 rounded bg-gray-200">
+                            <code>
+                                {JSON.stringify(results.typesense_query, null, 2)}
+                            </code>
+                        </pre>
+                    )}
+                </>
+            }
+
             {/* Estado de carga */}
             {loading && (
                 <div className="text-center py-8">
@@ -57,18 +70,6 @@ export default function SearchComponent() {
             {/* Resultados con IA */}
             {results && (
                 <div>
-                    {/* Información de consulta IA */}
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
-                        <p className="text-sm text-blue-800">
-                            <strong>Búsqueda:</strong> &ldquo;{results.original_query}&rdquo;
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">
-                            <strong>Query generada:</strong> {results.typesense_query.q}
-                            {results.typesense_query.filter_by && ` | Filtros: ${results.typesense_query.filter_by}`}
-                            {results.typesense_query.sort_by && ` | Orden: ${results.typesense_query.sort_by}`}
-                        </p>
-                    </div>
-
                     {/* Información de resultados */}
                     <div className="mb-4 flex justify-between items-center">
                         <p className="text-gray-600">

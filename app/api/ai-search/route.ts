@@ -28,17 +28,39 @@ export async function POST(request: NextRequest) {
 
         console.log('Generated Typesense query:', typesenseQuery);
 
+        // Preparar los parámetros finales para Typesense
+        const typesenseParams = {
+            query: typesenseQuery.query || '*',
+            filter_by: typesenseQuery.filter_by,
+            sort_by: typesenseQuery.sort_by,
+            page: 1,
+            per_page: 20
+        };
+
+        console.log('Typesense query parameters before cleaning:', typesenseParams);
+
+
+        // Remover campos undefined/null para limpiar la query
+        const cleanParams = Object.fromEntries(
+            Object.entries(typesenseParams).filter(([, value]) => value !== undefined && value !== null)
+        );
+
+        console.log('\n🔥 === QUERY FINAL A TYPESENSE ===');
+        console.log('🎯 Parámetros enviados a Typesense:', JSON.stringify(cleanParams, null, 2));
+        console.log('📋 Campos incluidos:', Object.keys(cleanParams));
+        console.log('=== FIN QUERY TYPESENSE ===\n');
+
+        console.log('Executing search in Typesense...', cleanParams);
+
         // 2. Ejecutar la consulta en Typesense
-        const searchResults = await searchService.searchProducts({
-            query: typesenseQuery.q || '*',
-            page: typesenseQuery.page || 1,
-            per_page: typesenseQuery.per_page || 20,
-            // Agregar filtros si existen
-            ...(typesenseQuery.filter_by && {
-                // Aquí podrías parsear filter_by si necesitas filtros específicos
-                // Por ahora mantenemos simple
-            })
-        });
+        const searchResults = await searchService.searchProducts(cleanParams);
+
+        console.log('\n✅ === RESPUESTA DE TYPESENSE ===');
+        console.log('📊 Resultados encontrados:', searchResults.found || 0);
+        console.log('⏱️ Tiempo de búsqueda:', (searchResults.search_time_ms || 0) + 'ms');
+        console.log('📦 Productos retornados:', searchResults.hits?.length || 0);
+        console.log('🏷️ Facets disponibles:', searchResults.facet_counts?.length || 0);
+        console.log('=== FIN RESPUESTA TYPESENSE ===\n');
 
         return NextResponse.json({
             success: true,
