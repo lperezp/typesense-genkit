@@ -10,8 +10,8 @@ export const _ProductSchemaResponse = z.object({
     sub_category_name: z.string(),
     brand_id: z.string(),
     brand_name: z.string(),
-    link: z.string(),
-    image_url: z.string(),
+    link: z.string().url(),
+    image_url: z.string().url(),
     stock: z.number(),
     list_price: z.number(),
     price: z.number(),
@@ -27,14 +27,10 @@ export type _ProductSchemaResponse = z.infer<typeof _ProductSchemaResponse>;
 
 // Esquema para la consulta de Typesense que generará Gemini
 export const TypesenseQuerySchema = z.object({
-    q: z.string().optional().describe('Texto de búsqueda. Usar solo si filter_by no es suficiente'),
-    query_by: z.string().optional().describe('Campos en los que buscar: name,brand_name,category_name,sub_category_name'),
-    filter_by: z.string().optional().describe('Filtros de Typesense en formato: campo:valor && campo2:valor2'),
-    sort_by: z.string().optional().describe('Ordenación en formato: campo:asc o campo:desc'),
-    facet_by: z.string().optional().describe('Campos para facets separados por comas'),
-    page: z.number().optional().describe('Número de página'),
-    per_page: z.number().optional().describe('Elementos por página'),
-});
+    query: z.string().describe('a full-text search query'),
+    filter_by: z.string().describe('a filter query in Typesense format'),
+    sort_by: z.string().describe('a sorting query in Typesense format'),
+}).partial();
 
 export type TypesenseQuerySchema = z.infer<typeof TypesenseQuerySchema>;
 
