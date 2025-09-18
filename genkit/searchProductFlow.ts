@@ -1,4 +1,4 @@
-import { googleAI } from '@genkit-ai/googleai';
+import { vertexAI } from '@genkit-ai/vertexai';
 import { genkit, GenkitError, z } from 'genkit';
 import { Client } from 'typesense';
 import { CollectionFieldSchema } from 'typesense/lib/Typesense/Collection';
@@ -49,7 +49,7 @@ type _ProductSchemaResponse = {
 };
 
 const ai = genkit({
-    plugins: [googleAI()],
+    plugins: [vertexAI()],
 });
 
 let cachedCollectionProperties: string | null = null;
@@ -137,6 +137,7 @@ export const generateTypesenseQuery = ai.defineFlow(
 
             // Construir el system prompt
             const systemPrompt = `You are helping a user search for clothing. Convert their query to the appropriate Typesense query format according to the instructions below.
+                    The user will always speak to you in Spanish. Furthermore, all product information is in Spanish. Therefore, you must return all references in Spanish, but following the search rules.
                     
                     ### Typesense Query Syntax ###
 
@@ -170,11 +171,34 @@ export const generateTypesenseQuery = ai.defineFlow(
                     should be simplified as:
                     \`brand_name:[TERRAIN, PUMA, FILA]\`
 
+                    IMPORTANT SEARCH RULES:
+                    1. NEVER use "query": "*" unless the user explicitly asks for "todos los productos" or "mostrar todo"
+                    2. ALWAYS extract the main search term (producto principal) for the "query" field
+                    3. Use filters (filter_by) for attributes like brand, color, size, gender, category
+                    4. Use sort_by for price ordering (cheap/barato = price:asc, expensive/caro = price:desc)
+                    5. If add gender in the search, ALWAYS add gender or its equivalent in filter_by
+                    6. The user will search for their search terms in Spanish, so the rule must be followed. If you add a color or gender, respect the filter.
+                    7. If user add "talla" or "tallas", use size in filter_by
+                    8. If user add "hombre" or "varón", use gender:Hombre in filter_by
+                    9. If user add "mujer" or "dama", use gender:Mujer in filter_by
+
+
+                    EXAMPLES:
+                    - "polos rojos PUMA" → {"query": "polos", "filter_by": "color:Rojo && brand_name:PUMA"}
+                    - "zapatillas baratas" → {"query": "zapatillas", "sort_by": "price:asc"}
+                    - "casacas mujer talla M" → {"query": "casacas", "filter_by": "gender:Mujer && size:M"}
+                    - "polos de hombre" → {"query": "polos", "filter_by": "gender:Hombre && sub_category_name:\"Polos\""}
+                    - "pantalones de mujer talla L color azul" → {"query": "pantalones", "filter_by": "gender:Mujer && size:L && color:Azul"}
+                    - "productos azules" → {"query": "productos", "filter_by": "color:Azul"}
+                    - "mostrar todo" → {"query": "*"}
+                    - "polos rojos o azules" → {"filter_by": "color:[Rojo,Azul]"}
+                    - "polos Nike que no sean negras" → {"filter_by": "brand_name:Nike && color:!=Negro"}
+
                     ## Sorting ##
 
                     You can only sort maximum 3 sort fields at a time. The syntax is {fieldName}: follow by asc (ascending) or dsc (descending), if sort by multiple fields, separate them by a comma. Examples:
                     - price:desc
-                    - price:asc,brand_name:desc
+                    - price:asc
 
                     Sorting hints:
                     - When a user says something like "good price," sort by price.
@@ -186,7 +210,7 @@ export const generateTypesenseQuery = ai.defineFlow(
                     ${collectionProperties}
 
                     ### Query ###
-                    Include query only if both filter_by and sort_by are inadequate. Don't include filter_by or sort_by in the ouput if their values are null.
+                    Include query only if both filter_by and sort_by are suitable. Don't include filter_by or sort_by in the ouput if their values are null.
 
                     ### Output Instructions ###
                     Provide the valid JSON with the correct filter and sorting format, only include fields with non-null values. Do not add extra text or explanations.`;
@@ -203,7 +227,7 @@ export const generateTypesenseQuery = ai.defineFlow(
 
             console.log('Calling ai.generate...');
             const { output } = await ai.generate({
-                model: googleAI.model('gemini-1.5-flash'),
+                model: vertexAI.model('gemini-2.5-flash'),
                 system: systemPrompt,
                 prompt: `${query}`,
                 output: { schema: TypesenseQuerySchema },

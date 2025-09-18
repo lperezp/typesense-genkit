@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 export default function SearchComponent() {
     const { results, loading, error, aiSearch } = useAISearch();
     const [searchQuery, setSearchQuery] = useState('');
-    const [showGeminiResponse, setShowGeminiResponse] = useState(true);
+    const [showGeminiResponse] = useState(true);
 
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
@@ -124,7 +124,7 @@ export default function SearchComponent() {
                     {/* Mensaje para más resultados */}
                     {results.results.hits.length === 20 && (
                         <div className="text-center text-gray-500 text-sm">
-                            Refiná tu búsqueda para encontrar productos más específicos
+                            Ajusta tu búsqueda para encontrar productos más específicos
                         </div>
                     )}
                 </div>
