@@ -1,31 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearch } from '@/app/hooks/useSearch';
+import { useAISearch } from '@/app/hooks/useAISearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
 export default function SearchComponent() {
-    const { results, loading, error, search } = useSearch();
+    const { results, loading, error, aiSearch } = useAISearch();
     const [searchQuery, setSearchQuery] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
 
-    const handleSearch = async (page = 1) => {
-        setCurrentPage(page);
-
-        const searchParams = {
-            query: searchQuery || '*',
-            page,
-            per_page: 20
-        };
-
-        await search(searchParams);
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) return;
+        await aiSearch(searchQuery);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
-            handleSearch(1);
+            handleSearch();
         }
     };
 
@@ -42,7 +34,7 @@ export default function SearchComponent() {
                         onKeyPress={handleKeyPress}
                         className="flex-1"
                     />
-                    <Button onClick={() => handleSearch(1)} disabled={loading}>
+                    <Button onClick={() => handleSearch()} disabled={loading}>
                         {loading ? 'Buscando...' : 'Buscar'}
                     </Button>
                 </div>
@@ -62,22 +54,31 @@ export default function SearchComponent() {
                 </div>
             )}
 
-            {/* Resultados */}
+            {/* Resultados con IA */}
             {results && (
                 <div>
+                    {/* Información de consulta IA */}
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                        <p className="text-sm text-blue-800">
+                            <strong>Búsqueda:</strong> &ldquo;{results.original_query}&rdquo;
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                            <strong>Query generada:</strong> {results.typesense_query.q}
+                            {results.typesense_query.filter_by && ` | Filtros: ${results.typesense_query.filter_by}`}
+                            {results.typesense_query.sort_by && ` | Orden: ${results.typesense_query.sort_by}`}
+                        </p>
+                    </div>
+
                     {/* Información de resultados */}
                     <div className="mb-4 flex justify-between items-center">
                         <p className="text-gray-600">
-                            Se encontraron {results.found} productos en {results.search_time_ms}ms
-                        </p>
-                        <p className="text-gray-600">
-                            Página {currentPage}
+                            Se encontraron {results.results.found} productos en {results.results.search_time_ms}ms
                         </p>
                     </div>
 
                     {/* Lista de productos */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-                        {results.hits.map((hit) => (
+                        {results.results.hits.map((hit) => (
                             <Card key={hit.document.sku_id} className="p-4">
                                 <div className="aspect-square mb-3 bg-gray-100 rounded overflow-hidden">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -111,34 +112,20 @@ export default function SearchComponent() {
                                             S/. {hit.document.price.toFixed(2)}
                                         </p>
                                     </div>
-                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                        Match: {Math.round(hit.text_match)}
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                        IA: {Math.round(hit.text_match)}
                                     </span>
                                 </div>
                             </Card>
                         ))}
                     </div>
 
-                    {/* Paginación */}
-                    <div className="flex justify-center gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => handleSearch(currentPage - 1)}
-                            disabled={currentPage === 1 || loading}
-                        >
-                            Anterior
-                        </Button>
-                        <span className="flex items-center px-4">
-                            Página {currentPage}
-                        </span>
-                        <Button
-                            variant="outline"
-                            onClick={() => handleSearch(currentPage + 1)}
-                            disabled={results.hits.length < 20 || loading}
-                        >
-                            Siguiente
-                        </Button>
-                    </div>
+                    {/* Mensaje para más resultados */}
+                    {results.results.hits.length === 20 && (
+                        <div className="text-center text-gray-500 text-sm">
+                            Refiná tu búsqueda para encontrar productos más específicos
+                        </div>
+                    )}
                 </div>
             )}
 
