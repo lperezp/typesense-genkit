@@ -1,4 +1,4 @@
-import { vertexAI } from '@genkit-ai/vertexai';
+import { vertexAI } from '@genkit-ai/google-genai';
 import { genkit, GenkitError, z } from 'genkit';
 import { Client } from 'typesense';
 import { CollectionFieldSchema } from 'typesense/lib/Typesense/Collection';
@@ -128,7 +128,7 @@ export const generateTypesenseQuery = ai.defineFlow(
 
             let collectionProperties;
             try {
-                collectionProperties = await getCachedCollectionProperties();
+                collectionProperties = await getCollectionProperties();
             } catch (error) {
                 throw new Error(`Failed to get collection properties: ${error instanceof Error ? error.message : String(error)}`);
             }
@@ -136,90 +136,78 @@ export const generateTypesenseQuery = ai.defineFlow(
             console.log('Starting generateTypesenseQuery with query:', query);
 
             // Construir el system prompt
-            const systemPrompt = `You are helping a user search for clothing. Convert their query to the appropriate Typesense query format according to the instructions below.
-                    The user will always speak to you in Spanish. Furthermore, all product information is in Spanish. Therefore, you must return all references in Spanish, but following the search rules.
-                    
-                    ### Typesense Query Syntax ###
+            const systemPrompt = `Estás ayudando a un usuario a buscar ropa. Convierte su consulta al formato de consulta Typesense adecuado según las instrucciones a continuación.
+            El usuario siempre te hablará en español. Además, toda la información del producto está en español. Por lo tanto, debes devolver todas las referencias en español, pero siguiendo las reglas de búsqueda.
 
-                    ## Filtering ##
+            ### Sintaxis de consulta Typesense ###
 
-                    Matching values: {fieldName}: followed by a string value or an array of string values each separated by a comma. Enclose the string value with backticks if it contains parentheses \`()\`. Examples:
-                    - size:S
-                    - brand_name:[TERRAIN,PUMA] returns products of the TERRAIN or PUMA brand.
-                    - sub_category_name:\`Polos para Hombre\`
+            ## Filtrado ##
 
-                    Numeric Filters: Use :[min..max] for ranges, or comparison operators like :>, :<, :>=, :<=, :=. Examples:
-                    - price:[20..80]
-                    - price:>40
-                    - price:=250
+            Valores coincidentes: {fieldName}: seguido de una cadena o un array de cadenas, cada una separada por una coma. Encierra la cadena entre comillas invertidas si contiene paréntesis \`()\`. Ejemplos:
+            - size:S
+            - brand_name:[TERRAIN,PUMA] devuelve productos de la marca TERRAIN o PUMA.
+            - sub_category_name:\`Polos para Hombre\`
 
-                    Multiple Conditions: Separate conditions with &&. Examples:
-                    - price: >100 && brand_name: [TERRAIN,PUMA]
-                    - size:=S && color:=Azul
+            Filtros numéricos: Usa :[min..max] para rangos u operadores de comparación como :>, :<, :>=, :<=, :=. Ejemplos:
+            - precio:[20..80]
+            - precio:>40
+            - precio:=250
 
-                    OR Conditions Across Fields: Use || only for different fields. Examples:
-                    - size:S || color:Azul
-                    - (size:S || color:Azul) && price:>40
+            Condiciones múltiples: Separe las condiciones con &&. Ejemplos:
+            - precio: >100 && marca: [TERRAIN,PUMA]
+            - talla:=S && color:=Azul
 
-                    Negation: Use :!= to exclude values. Examples:
-                    - brand_name:!=TERRAIN
-                    - brand_name:!=[TERRAIN,PUMA]
-                    - sub_category_name:!=\`Casacas para Hombre\`
+            Condiciones OR entre campos: Use || solo para campos diferentes. Ejemplos:
+            - talla:S || color:Azul
+            - (talla:S || color:Azul) && precio:>40
 
-                    If the same field is used for filtering multiple values in an || (OR) operation, then use the multi-value OR syntax. For eg:
-                    \`brand_name:TERRAIN || brand_name:PUMA || brand_name:FILA\`
-                    should be simplified as:
-                    \`brand_name:[TERRAIN, PUMA, FILA]\`
+            Negación: Use :!= para excluir valores. Ejemplos:
+            - marca:!=TERRAIN
+            - marca:!=[TERRAIN,PUMA]
+            - subcategoría:!=\`Casacas para Hombre\`
 
-                    IMPORTANT SEARCH RULES:
-                    1. NEVER use "query": "*" unless the user explicitly asks for "todos los productos" or "mostrar todo"
-                    2. ALWAYS extract the main search term (producto principal) for the "query" field
-                    3. Use filters (filter_by) for attributes like brand, color, size, gender, category
-                    4. Use sort_by for price ordering (cheap/barato = price:asc, expensive/caro = price:desc)
-                    5. If add gender in the search, ALWAYS add gender or its equivalent in filter_by
-                    6. The user will search for their search terms in Spanish, so the rule must be followed. If you add a color or gender, respect the filter.
-                    7. If user add "talla" or "tallas", use size in filter_by
-                    8. If user add "hombre" or "varón", use gender:Hombre in filter_by
-                    9. If user add "mujer" or "dama", use gender:Mujer in filter_by
+            Si se usa el mismo campo para filtrar varios valores en una operación || (OR), use la sintaxis OR multivalor. Por ejemplo:
+            \`marca:TERRAIN || brand_name:PUMA || brand_name:FILA\`
+            Debe simplificarse como:
+            \`brand_name:[TERRAIN, PUMA, FILA]\`
 
+            EJEMPLOS: 
+            - "polos rojos PUMA" → {"query": "polos", "filter_by": "color:Rojo && brand_name:PUMA"} 
+            - "zapatillas baratas" → {"query": "zapatillas", "sort_by": "price:asc"} 
+            - "casacas mujer talla M" → {"query": "casacas", "filter_by": "gender:Mujer && size:M"} 
+            - "polos de hombre" → {"query": "polos", "filter_by": "gender:Hombre && sub_category_name:\"Polos\""} 
+            - "pantalones de mujer talla L color azul" → {"query": "pantalones", "filter_by": "gender:Mujer && size:L && color:Azul"} 
+            - "productos azules" → {"query": "productos", "filter_by": "color:Azul"} 
+            - "mostrar todo" → {"consulta": "*"} 
+            - "polos rojos o azules" → {"filter_by": "color:[Rojo,Azul]"} 
+            - "polos Nike que no sean negras" → {"filter_by": "brand_name:Nike && color:!=Negro"} 
 
-                    EXAMPLES:
-                    - "polos rojos PUMA" → {"query": "polos", "filter_by": "color:Rojo && brand_name:PUMA"}
-                    - "zapatillas baratas" → {"query": "zapatillas", "sort_by": "price:asc"}
-                    - "casacas mujer talla M" → {"query": "casacas", "filter_by": "gender:Mujer && size:M"}
-                    - "polos de hombre" → {"query": "polos", "filter_by": "gender:Hombre && sub_category_name:\"Polos\""}
-                    - "pantalones de mujer talla L color azul" → {"query": "pantalones", "filter_by": "gender:Mujer && size:L && color:Azul"}
-                    - "productos azules" → {"query": "productos", "filter_by": "color:Azul"}
-                    - "mostrar todo" → {"query": "*"}
-                    - "polos rojos o azules" → {"filter_by": "color:[Rojo,Azul]"}
-                    - "polos Nike que no sean negras" → {"filter_by": "brand_name:Nike && color:!=Negro"}
+            ## Clasificación ## 
 
-                    ## Sorting ##
+            Sólo puede ordenar un máximo de 3 campos de clasificación a la vez. La sintaxis es {fieldName}: siga por asc (ascendente) o dsc (descendente), si ordena por varios campos, sepárelos con una coma. Ejemplos:
+            - precio:desc
+            - precio:asc
 
-                    You can only sort maximum 3 sort fields at a time. The syntax is {fieldName}: follow by asc (ascending) or dsc (descending), if sort by multiple fields, separate them by a comma. Examples:
-                    - price:desc
-                    - price:asc
+            Consejos de ordenación:
+            - Cuando un usuario dice algo como "buen precio", ordene por precio.
 
-                    Sorting hints:
-                    - When a user says something like "good price," sort by price.
+            ## Propiedades del producto ##
+            Las siguientes son las propiedades del producto que puede usar para filtrar y ordenar los datos. Ignore por completo los nombres de campo que no estén en la lista.
+            | Nombre | Tipo de dato | Filtro | Ordenar | Valores de enumeración | Descripción |
+            |------|-----------|--------|------|-------------|-------------|
+            ${collectionProperties}
 
-                    ## Product properties ##
-                    The following are the product properties that you can use to filter and sort the data. Completely ignore the field names that are not in the list.
-                    | Name | Data Type | Filter | Sort | Enum Values | Description |
-                    |------|-----------|--------|------|-------------|-------------|
-                    ${collectionProperties}
+            ### Consulta ###
+            Incluya la consulta solo si tanto filter_by como sort_by son adecuados. No incluya filter_by ni sort_by en la salida si sus valores son nulos.
 
-                    ### Query ###
-                    Include query only if both filter_by and sort_by are suitable. Don't include filter_by or sort_by in the ouput if their values are null.
-
-                    ### Output Instructions ###
-                    Provide the valid JSON with the correct filter and sorting format, only include fields with non-null values. Do not add extra text or explanations.`;
+            ### Instrucciones de salida ###
+            Proporcione el JSON válido con el filtro y el formato de ordenación correctos. Incluya solo los campos con valores no nulos. No añada texto adicional ni explicaciones.`;
 
             // Imprimir prompts en consola para debugging
             console.log('\n=== GENKIT AI PROMPT DEBUG ===');
             console.log('🔍 User Query:', query);
             console.log('\n📋 Collection Properties:');
-            console.log(collectionProperties);
+            // console.log(collectionProperties);
             console.log('\n🤖 System Prompt:');
             console.log(systemPrompt);
             console.log('\n💬 User Prompt:', query);
@@ -230,11 +218,12 @@ export const generateTypesenseQuery = ai.defineFlow(
                 model: vertexAI.model('gemini-2.5-flash'),
                 system: systemPrompt,
                 prompt: `${query}`,
-                output: { schema: TypesenseQuerySchema },
             });
 
-            console.log('ai.generate completed successfully');
-            console.log('🎯 Generated Typesense Query:', JSON.stringify(output, null, 2));
+            // console.log('ai.generate completed successfully');
+            // console.log('🤖 AI Output:', JSON.stringify(output.text()));
+
+            // console.log('🎯 Generated Typesense Query:', JSON.stringify(output));
             if (output !== null) return output;
         } catch (error) {
             console.error('Error details:', error);

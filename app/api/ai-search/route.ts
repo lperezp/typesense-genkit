@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
         // Preparar los parámetros finales para Typesense
         const typesenseParams = {
             query: typesenseQuery.query || '*',
+            query_by: 'name,categories',
             filter_by: typesenseQuery.filter_by,
             sort_by: typesenseQuery.sort_by,
             page: 1,

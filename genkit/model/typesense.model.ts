@@ -32,8 +32,6 @@ export const TypesenseQuerySchema = z.object({
     sort_by: z.string().describe('a sorting query in Typesense format'),
 }).partial();
 
-export type TypesenseQuerySchema = z.infer<typeof TypesenseQuerySchema>;
-
 // Esquema para describir campos de la colección
 export const TypesenseFieldDescriptionSchema = z.record(z.string(), z.string());
 export type TypesenseFieldDescriptionSchema = z.infer<typeof TypesenseFieldDescriptionSchema>;

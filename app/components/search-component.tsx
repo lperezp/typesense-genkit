@@ -104,18 +104,10 @@ export default function SearchComponent() {
                                 </p>
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        {hit.document.list_price > hit.document.price && (
-                                            <span className="text-xs text-gray-500 line-through">
-                                                S/. {hit.document.list_price.toFixed(2)}
-                                            </span>
-                                        )}
                                         <p className="font-bold text-green-600">
                                             S/. {hit.document.price.toFixed(2)}
                                         </p>
                                     </div>
-                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                        IA: {Math.round(hit.text_match)}
-                                    </span>
                                 </div>
                             </Card>
                         ))}
