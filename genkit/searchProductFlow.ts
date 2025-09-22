@@ -52,8 +52,6 @@ const ai = genkit({
     plugins: [vertexAI()],
 });
 
-let cachedCollectionProperties: string | null = null;
-
 async function getCollectionProperties() {
     try {
         const collection = await client
@@ -107,15 +105,6 @@ async function getCollectionProperties() {
         return ``;
     }
 }
-
-const getCachedCollectionProperties = async () => {
-    if (cachedCollectionProperties === null) {
-        cachedCollectionProperties = await getCollectionProperties();
-        console.log('Cached collection properties:', cachedCollectionProperties);
-
-    }
-    return cachedCollectionProperties;
-};
 
 export const generateTypesenseQuery = ai.defineFlow(
     {
