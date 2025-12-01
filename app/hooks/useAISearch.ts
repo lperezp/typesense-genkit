@@ -38,7 +38,7 @@ interface UseAISearchResult {
 }
 
 export function useAISearch(): UseAISearchResult {
-    const [results, setResults] = useState<AISearchResponse | null>(null);
+    const [results, setResults] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
